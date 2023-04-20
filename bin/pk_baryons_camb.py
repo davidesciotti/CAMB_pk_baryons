@@ -77,13 +77,6 @@ if halofit_version == 'mead2020_feedback':
 for name_param_to_vary in fid_pars_dict.keys():
     print(f'working on {name_param_to_vary}')
 
-    # ! re-initialize
-    # params_dict = {'Omega_m': Omega_m, 'Omega_b': Omega_b, 'w0_fld': w0_fld,
-    #                'wa_fld': wa_fld, 'h': h, 'n_s': n_s, 'sigma8': sigma8,
-    #                'm_ncdm': m_ncdm, 'Omega_Lambda': Omega_Lambda}
-
-    i = 0  # to keep track of the iteration number, not important
-
     param_values = fid_pars_dict[name_param_to_vary] + fid_pars_dict[name_param_to_vary] * percentages
 
     if name_param_to_vary == "wa":  # wa is 0! take directly the percentages
@@ -155,7 +148,8 @@ for name_param_to_vary in fid_pars_dict.keys():
         pars.NonLinear = model.NonLinear_both
 
         if halofit_version == 'mead2020_feedback':
-            pars.NonLinearModel.set_params(halofit_version=halofit_version, HMCode_logT_AGN=vinc_pars_dict_tovary['logT_AGN'])
+            pars.NonLinearModel.set_params(halofit_version=halofit_version,
+                                           HMCode_logT_AGN=vinc_pars_dict_tovary['logT_AGN'])
         elif halofit_version == 'bird':  # this is "takabird"
             pars.NonLinearModel.set_params(halofit_version='bird')
         else:
