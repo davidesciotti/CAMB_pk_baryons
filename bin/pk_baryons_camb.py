@@ -44,6 +44,8 @@ z_grid = np.linspace(zmin, zmax, zpoints)
 pk_header = 'redshift \t log10(k) {Mpc^-1} \t P_mm nonlin(k) {Mpc^3}'
 halofit_version = 'bird'  # or 'mead2020_feedback'
 pk_output_path = f'/Users/davide/Documents/Lavoro/Programmi/CAMB_pk_baryons/output/{halofit_version}'
+use_only_flat_models = True
+only_print_cosmo_params = True
 # ! end options
 
 
@@ -91,6 +93,19 @@ for name_param_to_vary in fid_pars_dict.keys():
 
     for vinc_pars_dict_tovary[name_param_to_vary] in param_values:  # producing 19 PS
 
+        if use_only_flat_models:
+
+            omk = 0
+            if name_param_to_vary == 'Omega_M':
+                vinc_pars_dict_tovary['Omega_DE'] = 1 - vinc_pars_dict_tovary['Omega_M']
+            elif name_param_to_vary == 'Omega_DE':
+                vinc_pars_dict_tovary['Omega_M'] = 1 - vinc_pars_dict_tovary['Omega_DE']
+
+        else:
+            omk = 1 - vinc_pars_dict_tovary['Omega_M'] - vinc_pars_dict_tovary['Omega_DE']  # I'll have non-flat models!
+            if np.abs(omk) < 1e-8:
+                omk = 0
+
         Omega_nu = omnuh2 / (vinc_pars_dict_tovary['h'] ** 2)
 
         # 1. adjust the values of the other parameters accordingly
@@ -107,6 +122,9 @@ for name_param_to_vary in fid_pars_dict.keys():
             omk = 0
 
         # 2. translate dict to camb-like dict
+        # clarification: vinc_pars_dict_tovary is the dictionary of vincenz's parameters to vary, which have to be
+        # translated into CAMB-friendly parameters. The ones which are already in CAMB-friendly format are the
+        # 'ns', 'w0' and 'wa'. The camb-frienfly ones are declared as variables, then stored in camb_params_dict_for_As
         camb_pars_dict_for_As = {
             'omch2': omch2,
             'ombh2': ombh2,
@@ -121,53 +139,59 @@ for name_param_to_vary in fid_pars_dict.keys():
             'sigma8': vinc_pars_dict_tovary['sigma8'],
         }
 
-        # compute As and remove sigma8 from the dict
-        As = sigma8_to_As(camb_pars_dict_for_As, extra_args)
-
-        print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
-              f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}\t{As:.7e}')
-        from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
-
-        # should I do this?
-        pars = camb.CAMBparams()
-        pars.set_cosmology(
-            omch2=omch2,
-            ombh2=ombh2,
-            omk=omk,
-            # omnuh2=omnuh2,
-            # w=vinc_pars_dict_tovary['w0'],
-            # wa=vinc_pars_dict_tovary['wa'],
-            H0=H0,
-            mnu=mnu,
-            nnu=nnu,
-            num_massive_neutrinos=1,
-        )
-        pars.InitPower.set_params(ns=vinc_pars_dict_tovary['n_s'], As=As)
-        pars.set_dark_energy(w=vinc_pars_dict_tovary['w0'], wa=vinc_pars_dict_tovary['wa'], dark_energy_model='ppf')
-        pars.set_matter_power(redshifts=z_grid, kmax=kmax)
-        pars.NonLinear = model.NonLinear_both
-
-        if halofit_version == 'mead2020_feedback':
-            pars.NonLinearModel.set_params(halofit_version=halofit_version,
-                                           HMCode_logT_AGN=vinc_pars_dict_tovary['logT_AGN'])
-        elif halofit_version == 'bird':  # this is "takabird"
-            pars.NonLinearModel.set_params(halofit_version='bird')
+        if only_print_cosmo_params:
+            # for debugging, print the cosmological parameters
+            print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
+                  f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}')
         else:
-            raise ValueError('halofit_version must be either "mead2020_feedback" or "bird')
+            # compute As and remove sigma8 from the dict
+            As = sigma8_to_As(camb_pars_dict_for_As, extra_args)
 
-        results = camb.get_results(pars)
-        results.calc_power_spectra(pars)
-        kh_grid, z_grid, pkh = results.get_matter_power_spectrum(minkh=kmin / vinc_pars_dict_tovary['h'],
-                                                                 maxkh=kmax / vinc_pars_dict_tovary['h'],
-                                                                 npoints=kpoints)
-        k_grid = kh_grid * vinc_pars_dict_tovary['h']
-        pk = pkh / vinc_pars_dict_tovary['h'] ** 3
+            print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
+                  f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}\t{As:.7e}')
 
-        z_grid_reshaped = np.repeat(z_grid, kpoints).reshape(-1, 1)
-        k_grid_reshaped = np.log10(np.tile(k_grid, zpoints).reshape(-1, 1))
-        pk_tosave = np.column_stack((z_grid_reshaped, k_grid_reshaped, pk.flatten()))
-        np.savetxt(f'{pk_output_path}/{name_param_to_vary}/'
-                   f'PddVsZedLogK-{name_param_to_vary}_{vinc_pars_dict_tovary[name_param_to_vary]:.3e}.dat',
-                   pk_tosave, header=pk_header)
+            from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
+
+            # should I do this?
+            pars = camb.CAMBparams()
+            pars.set_cosmology(
+                omch2=omch2,
+                ombh2=ombh2,
+                omk=omk,
+                # omnuh2=omnuh2,
+                # w=vinc_pars_dict_tovary['w0'],
+                # wa=vinc_pars_dict_tovary['wa'],
+                H0=H0,
+                mnu=mnu,
+                nnu=nnu,
+                num_massive_neutrinos=1,
+            )
+            pars.InitPower.set_params(ns=vinc_pars_dict_tovary['n_s'], As=As)
+            pars.set_dark_energy(w=vinc_pars_dict_tovary['w0'], wa=vinc_pars_dict_tovary['wa'], dark_energy_model='ppf')
+            pars.set_matter_power(redshifts=z_grid, kmax=kmax)
+            pars.NonLinear = model.NonLinear_both
+
+            if halofit_version == 'mead2020_feedback':
+                pars.NonLinearModel.set_params(halofit_version=halofit_version,
+                                               HMCode_logT_AGN=vinc_pars_dict_tovary['logT_AGN'])
+            elif halofit_version == 'bird':  # this is "takabird"
+                pars.NonLinearModel.set_params(halofit_version='bird')
+            else:
+                raise ValueError('halofit_version must be either "mead2020_feedback" or "bird')
+
+            results = camb.get_results(pars)
+            results.calc_power_spectra(pars)
+            kh_grid, z_grid, pkh = results.get_matter_power_spectrum(minkh=kmin / vinc_pars_dict_tovary['h'],
+                                                                     maxkh=kmax / vinc_pars_dict_tovary['h'],
+                                                                     npoints=kpoints)
+            k_grid = kh_grid * vinc_pars_dict_tovary['h']
+            pk = pkh / vinc_pars_dict_tovary['h'] ** 3
+
+            z_grid_reshaped = np.repeat(z_grid, kpoints).reshape(-1, 1)
+            k_grid_reshaped = np.log10(np.tile(k_grid, zpoints).reshape(-1, 1))
+            pk_tosave = np.column_stack((z_grid_reshaped, k_grid_reshaped, pk.flatten()))
+            np.savetxt(f'{pk_output_path}/{name_param_to_vary}/'
+                       f'PddVsZedLogK-{name_param_to_vary}_{vinc_pars_dict_tovary[name_param_to_vary]:.3e}.dat',
+                       pk_tosave, header=pk_header)
 
 print('done')
