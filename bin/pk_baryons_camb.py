@@ -6,6 +6,7 @@ from camb import model, initialpower
 import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib
+from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
 
 matplotlib.use('Qt5Agg')
 
@@ -91,7 +92,7 @@ for name_param_to_vary in fid_pars_dict.keys():
     # initialize after having shifted a parameter
     vinc_pars_dict_tovary = deepcopy(fid_pars_dict)
 
-    for vinc_pars_dict_tovary[name_param_to_vary] in param_values:  # producing 19 PS
+    for param_idx, vinc_pars_dict_tovary[name_param_to_vary] in enumerate(param_values):  # producing 19 PS
 
         if use_only_flat_models:
 
@@ -139,18 +140,38 @@ for name_param_to_vary in fid_pars_dict.keys():
             'sigma8': vinc_pars_dict_tovary['sigma8'],
         }
 
+
+        main_params_header = list(vinc_pars_dict_tovary.keys())
+        main_params_values = [vinc_pars_dict_tovary[key] for key in main_params_header]
+        other_params_header = ['Omega_CDM', 'omk', 'omch2', 'ombh2', 'Omega_nu']
+        params_header = main_params_header + other_params_header
+
+        other_params_values = [f"{Omega_CDM:.4f}", f"{omk:.6f}", f"{omch2:.4f}", f"{ombh2:.4f}", f"{Omega_nu:.4f}"]
+        values_list = [f"{val:.4f}" for val in main_params_values] + other_params_values
+        # Create a formatted header and values string
+        header_str = "\t".join([f"{name:<8}" for name in params_header])
+        values_str = "\t".join([f"{value:<8}" for value in values_list])
+        # Print the header and values
+
         if only_print_cosmo_params:
-            # for debugging, print the cosmological parameters
-            print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
-                  f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}')
+            if param_idx == 0:
+                print(header_str)
+            print(values_str)
+
+
         else:
             # compute As and remove sigma8 from the dict
             As = sigma8_to_As(camb_pars_dict_for_As, extra_args)
 
-            print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
-                  f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}\t{As:.7e}')
+            params_header += ['As']
+            values_list += [f"{As:.7e}"]
+            header_str = "\t".join([f"{name:<8}" for name in params_header])
+            values_str = "\t".join([f"{value:<8}" for value in values_list])
+            if param_idx == 0:
+                print(header_str)
+            print(values_str)
 
-            from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
+
 
             # should I do this?
             pars = camb.CAMBparams()
