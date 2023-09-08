@@ -3,8 +3,8 @@ from copy import deepcopy
 import numpy as np
 import camb
 from camb import model, initialpower
+from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
 import matplotlib.pyplot as plt
-import pandas as pd
 import matplotlib
 
 matplotlib.use('Qt5Agg')
@@ -45,7 +45,7 @@ pk_header = 'redshift \t log10(k) {Mpc^-1} \t P_mm nonlin(k) {Mpc^3}'
 halofit_version = 'bird'  # 'bird' or 'mead2020_feedback'
 pk_output_path = f'/Users/davide/Documents/Lavoro/Programmi/CAMB_pk_baryons/output/dustgrain'
 use_only_flat_models = True
-only_print_cosmo_params = True
+only_print_cosmo_params = False
 # ! end options
 
 
@@ -64,22 +64,27 @@ extra_args = {'dark_energy_model': 'ppf'}
 
 # fiducials
 fid_pars_dict = {
-    'Omega_M': 0.32,
-    'Omega_B': 0.05,
-    'Omega_DE': 0.68,
+    'Omega_M': 0.3134,
+    'Omega_B': 0.0491,
+    'Omega_DE': 0.6866,
     'w0': -1.0,
     'wa': 0.0,
-    'h': 0.67,
-    'n_s': 0.966,
-    'sigma8': 0.816,
+    'h': 0.6731,
+    'n_s': 0.9658,
+    'sigma8': 0.842,
 }
 if halofit_version == 'mead2020_feedback':
     fid_pars_dict['logT_AGN'] = 7.75
 
-for name_param_to_vary in fid_pars_dict.keys():
+variations_dict = {
+    'Omega_M': (0.2000, 0.3009, 0.3260, 0.4000),
+    'sigma8': (0.707, 0.808, 0.876, 0.977),
+}
+
+for name_param_to_vary in ('Omega_M', 'sigma8'):
     print(f'working on {name_param_to_vary}')
 
-    param_values = fid_pars_dict[name_param_to_vary] + fid_pars_dict[name_param_to_vary] * percentages
+    param_values = variations_dict[name_param_to_vary]
 
     if name_param_to_vary == "wa":  # wa is 0! take directly the percentages
         param_values = percentages
@@ -91,7 +96,7 @@ for name_param_to_vary in fid_pars_dict.keys():
     # initialize after having shifted a parameter
     vinc_pars_dict_tovary = deepcopy(fid_pars_dict)
 
-    for vinc_pars_dict_tovary[name_param_to_vary] in param_values:  # producing 19 PS
+    for param_idx, vinc_pars_dict_tovary[name_param_to_vary] in enumerate(param_values):  # producing 19 PS
 
         if use_only_flat_models:
 
@@ -139,18 +144,35 @@ for name_param_to_vary in fid_pars_dict.keys():
             'sigma8': vinc_pars_dict_tovary['sigma8'],
         }
 
+        main_params_header = list(vinc_pars_dict_tovary.keys())
+        main_params_values = [vinc_pars_dict_tovary[key] for key in main_params_header]
+        other_params_header = ['Omega_CDM', 'omk', 'omch2', 'ombh2', 'Omega_nu']
+        params_header = main_params_header + other_params_header
+
+        other_params_values = [f"{Omega_CDM:.4f}", f"{omk:.6f}", f"{omch2:.4f}", f"{ombh2:.4f}", f"{Omega_nu:.4f}"]
+        values_list = [f"{val:.4f}" for val in main_params_values] + other_params_values
+        # Create a formatted header and values string
+        header_str = "\t".join([f"{name:<8}" for name in params_header])
+        values_str = "\t".join([f"{value:<8}" for value in values_list])
+        # Print the header and values
+
         if only_print_cosmo_params:
-            # for debugging, print the cosmological parameters
-            print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
-                  f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}')
+            if param_idx == 0:
+                print(header_str)
+            print(values_str)
+
+
         else:
             # compute As and remove sigma8 from the dict
             As = sigma8_to_As(camb_pars_dict_for_As, extra_args)
 
-            print(f'{np.array([vinc_pars_dict_tovary[key] for key in vinc_pars_dict_tovary.keys()])}'
-                  f'\t{Omega_CDM:.4f}\t{omk:.6f}\t{omch2:.4f}\t{ombh2:.4f}\t{Omega_nu:.4f}\t{As:.7e}')
-
-            from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
+            params_header += ['As']
+            values_list += [f"{As:.7e}"]
+            header_str = "\t".join([f"{name:<8}" for name in params_header])
+            values_str = "\t".join([f"{value:<8}" for value in values_list])
+            if param_idx == 0:
+                print(header_str)
+            print(values_str)
 
             # should I do this?
             pars = camb.CAMBparams()
