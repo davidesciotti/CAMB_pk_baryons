@@ -42,8 +42,8 @@ kmin, kmax, kpoints = 10 ** -5, 10 ** 2, 804  # 1/Mpc
 zmin, zmax, zpoints = 0., 3, 150  # CAMB computes 150 redshifts at most
 z_grid = np.linspace(zmin, zmax, zpoints)
 pk_header = 'redshift \t log10(k) {Mpc^-1} \t P_mm nonlin(k) {Mpc^3}'
-halofit_version = 'bird'  # or 'mead2020_feedback'
-pk_output_path = f'/Users/davide/Documents/Lavoro/Programmi/CAMB_pk_baryons/output/{halofit_version}'
+halofit_version = 'bird'  # 'bird' or 'mead2020_feedback'
+pk_output_path = f'/Users/davide/Documents/Lavoro/Programmi/CAMB_pk_baryons/output/dustgrain'
 use_only_flat_models = True
 only_print_cosmo_params = True
 # ! end options
