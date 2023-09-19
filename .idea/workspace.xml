@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="4b0f91c3-fdc5-4218-8591-c5390a7667fc" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/pk_baryons_camb.py" beforeDir="false" afterPath="$PROJECT_DIR$/bin/pk_baryons_camb.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +36,9 @@
       <module name="CAMB_pk_baryons" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/bin" />
       <option name="IS_MODULE_SDK" value="true" />
