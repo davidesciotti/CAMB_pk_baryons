@@ -10,7 +10,7 @@ from camb.dark_energy import DarkEnergyPPF, DarkEnergyFluid
 
 matplotlib.use('Qt5Agg')
 
-np.set_printoptions(formatter={'float': lambda x: "{0:0.4f}".format(x)})
+np.set_printoptions(formatter={'float': lambda x: "{0:0.4f}".format(x)}) 
 
 
 # TODO check h units
